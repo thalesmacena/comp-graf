@@ -157,6 +157,8 @@
    modelMatrix.translate(-x, -y, 0.0);
    // unless clicked this is (0,0)
    modelMatrix.translate(tx, ty, 0.0);
+
+  
  }
  
  /**
@@ -275,6 +277,35 @@
    console.log(m[8], m[9], m[10], m[11]);
    console.log(m[12], m[13], m[14], m[15]);
  }
+
+ /**
+  * Retorns a array of the rotating corner vertex
+  * @param {number} actualCorner the actual pivot corner vertex
+  */
+ function getRotatingCorners(actualCorner) {
+  switch(actualCorner){
+    case 0:
+      return [1,2,5];
+    case 1:
+      return [0,2,5];
+    case 2:
+      return [1,0,5];
+    case 5:
+      return [1,2,0];
+  }
+ }
+
+ /**
+  * Retorns a boolean with has a vertex colision with canva limit
+  * @param {number} pivotVertex the actual pivot corner vertex
+  */
+ function calculateVertexColison(pivotVertex) {
+  return getRotatingCorners(pivotVertex).map(c => {
+    const arr = modelMatrix.multiplyVector4(new Vector4([...getVertex(c), 0.0, 1.0])).elements;
+
+    return arr[0] > 2.5 || arr[0] < -2.5 || arr[1] > 2.5 || arr[1] < -2.5;
+  }).some(value => value === true);
+ }
  
  /**
   * Entry point when page is loaded.
@@ -369,6 +400,9 @@
  
      // angle increment
      var increment = 2.0;
+
+     // the direction of rotation, false = anti-hour, true = hour
+     var direction = false;
  
      // current corner for rotation
      var corner = new Vector4([...getVertex(cindex), 0.0, 1.0]);
@@ -380,10 +414,23 @@
       * @see https://developer.mozilla.org/en-US/docs/Web/API/window/requestAnimationFrame
       */
      return () => {
-       ang += increment;
-       ang = ang % 360;
+
+      let colison = calculateVertexColison(cindex);
+
+      if (colison) {
+        direction = !direction;
+      }
+
+      if (direction) {
+        ang -= increment;
+      } else {
+        ang += increment;
+      }
+
+      ang = ang % 360;
+     
        if (click) {
-         var [vx, vy] = getVertex(cindex);
+         const [vx, vy] = getVertex(cindex);
          corner.elements[0] = vx;
          corner.elements[1] = vy;
          corner = modelMatrix.multiplyVector4(corner);
@@ -391,6 +438,7 @@
          ty = corner.elements[1] - vy;
          click = false;
        }
+
        rotateAboutCorner(ang, corner.elements[0], corner.elements[1], tx, ty);
  
        draw();
